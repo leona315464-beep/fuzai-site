@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仲夏福仔民俗祭 — 管理後台</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    --brick: #8B2217;
+    --brick-dark: #6B1810;
+    --brick-pale: #F5E8E6;
+    --gold: #C8943A;
+    --white: #FFFAF8;
+    --ink: #1A0C0A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: #f0f0f0; color: var(--ink); }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--brick);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title { font-size: 16px; font-weight: 700; color: white; letter-spacing: 2px; }
+  .header-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .btn-logout {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: white; padding: 6px 14px; border-radius: 8px; font-size: 12px;
+    cursor: pointer; font-family: 'Noto Sans TC', sans-serif;
+  }
+
+  /* ── LOGIN ── */
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--brick-pale);
+  }
+  .login-card {
+    background: white; border-radius: 16px; padding: 40px 32px; text-align: center;
+    box-shadow: 0 4px 24px rgba(139,34,23,0.12); max-width: 360px; width: 100%;
+  }
+  .login-title { font-size: 20px; font-weight: 700; color: var(--brick); margin-bottom: 6px; letter-spacing: 1px; }
+  .login-sub { font-size: 13px; color: #888; margin-bottom: 28px; line-height: 1.7; }
+  .btn-google {
+    width: 100%; background: var(--brick); border: none; border-radius: 10px;
+    padding: 13px; font-family: 'Noto Sans TC', sans-serif; font-size: 14px;
+    font-weight: 700; color: white; cursor: pointer; letter-spacing: 1px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-google:hover { background: #a02820; }
+  .g-icon {
+    width: 20px; height: 20px; background: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 900; color: #4285F4; flex-shrink: 0;
+  }
+  .access-denied {
+    color: #c0392b; font-size: 13px; margin-top: 16px;
+    background: #fdecea; padding: 10px; border-radius: 8px; display: none;
+  }
+
+  /* ── MAIN ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── STAT CARDS ── */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: white; border-radius: 12px; padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .stat-label { font-size: 11px; color: #888; letter-spacing: 1px; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--brick); }
+  .stat-unit { font-size: 13px; color: #aaa; font-weight: 400; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; }
+  .tab {
+    padding: 10px 20px; font-size: 13px; cursor: pointer; border: none;
+    background: transparent; font-family: 'Noto Sans TC', sans-serif;
+    color: #888; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  }
+  .tab.active { color: var(--brick); border-bottom-color: var(--brick); }
+
+  /* ── TABLE ── */
+  .table-wrap { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .table-toolbar {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .table-toolbar-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .btn-export {
+    background: var(--gold); border: none; border-radius: 8px;
+    padding: 7px 16px; font-size: 12px; font-weight: 700; color: white;
+    cursor: pointer; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px;
+  }
+  .btn-export:hover { background: #b07e2e; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    background: #fafafa; padding: 10px 14px; text-align: left;
+    font-size: 11px; color: #888; letter-spacing: 1px; font-weight: 500;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid #f5f5f5; color: #333; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700;
+  }
+  .badge-done { background: #e8f5e9; color: #2e7d32; }
+  .badge-pending { background: #fff3e0; color: #e65100; }
+  .badge-full { background: #e3f2fd; color: #1565c0; }
+  .badge-partial { background: #f3e5f5; color: #6a1b9a; }
+
+  .stamp-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-filled { background: var(--brick); }
+  .dot-empty { background: #e0e0e0; }
+
+  .section-panel { display: none; }
+  .section-panel.active { display: block; }
+
+  .loading { text-align: center; padding: 40px; color: #aaa; font-size: 13px; }
+  .refresh-btn {
+    background: transparent; border: 1px solid #ddd; border-radius: 8px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer; color: #666;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN PAGE ── -->
+<div id="login-page" class="login-wrap">
+  <div class="login-card">
+    <div style="font-size:36px; margin-bottom:12px;">🏮</div>
+    <div class="login-title">管理後台</div>
+    <div class="login-sub">2026 仲夏福仔民俗祭<br>請以管理員 Google 帳號登入</div>
+    <button class="btn-google" onclick="loginAdmin()">
+      <div class="g-icon">G</div> Google 帳號登入
+    </button>
+    <div class="access-denied" id="access-denied">⚠️ 此帳號無管理員權限</div>
+  </div>
+</div>
+
+<!-- ── ADMIN PAGE ── -->
+<div id="admin-page" style="display:none;">
+  <div class="header">
+    <div>
+      <div class="header-title">🏮 仲夏福仔民俗祭 · 管理後台</div>
+      <div class="header-sub" id="admin-email"></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="refresh-btn" onclick="loadData()">↻ 重新整理</button>
+      <button class="btn-logout" onclick="logoutAdmin()">登出</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">總參與人數</div>
+        <div class="stat-value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">集滿六章</div>
+        <div class="stat-value" id="stat-full">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">完成問卷</div>
+        <div class="stat-value" id="stat-survey">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">已兌換序號</div>
+        <div class="stat-value" id="stat-gift">—</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('participants', this)">參與者集章記錄</button>
+      <button class="tab" onclick="switchTab('survey', this)">問卷回饋</button>
+      <button class="tab" onclick="switchTab('lottery', this)">抽獎獎項統計</button>
+    </div>
+
+
+    <!-- Lottery Stats -->
+    <div class="section-panel" id="panel-lottery">
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">抽獎獎項統計（每日限量20個）</div>
+          <button class="btn-export" onclick="loadLotteryStats()">🔄 重新整理</button>
+        </div>
+        <div id="lottery-stats-body"><div class="loading">載入中...</div></div>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <div class="section-panel active" id="panel-participants">
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">集章記錄</div>
+          <button class="btn-export" onclick="exportCSV('participants')">⬇ 匯出 CSV</button>
+        </div>
+        <div id="participants-body"><div class="loading">載入中…</div></div>
+      </div>
+    </div>
+
+    <!-- Survey -->
+    <div class="section-panel" id="panel-survey">
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">問卷回饋</div>
+          <button class="btn-export" onclick="exportCSV('survey')">⬇ 匯出 CSV</button>
+        </div>
+        <div id="survey-body"><div class="loading">載入中…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 管理員設定 ──────────────────────────────
+// 在這裡填入可以存取後台的 Google 帳號 email
+const ADMIN_EMAILS = [
+  "leona315464@gmail.com",
+  "ttfm1990@gmail.com",
+];
+
+// ── Firebase ────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCRSJM_6SsXgbE0P60xW4HpmgY81goA8tI",
+  authDomain: "fuzai-folkfestival-2026.firebaseapp.com",
+  projectId: "fuzai-folkfestival-2026",
+  storageBucket: "fuzai-folkfestival-2026.firebasestorage.app",
+  messagingSenderId: "809570555701",
+  appId: "1:809570555701:web:7bc103089e57094e0a1e7c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let allParticipants = [];
+let allSurveys = [];
+
+// ── AUTH ────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    document.getElementById("login-page").style.display = "none";
+    document.getElementById("admin-page").style.display = "block";
+    document.getElementById("admin-email").textContent = user.email;
+    loadData();
+  } else if (user) {
+    document.getElementById("access-denied").style.display = "block";
+    auth.signOut();
+  }
+});
+
+function loginAdmin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => alert("登入失敗：" + e.message));
+}
+
+function logoutAdmin() {
+  auth.signOut().then(() => {
+    document.getElementById("login-page").style.display = "flex";
+    document.getElementById("admin-page").style.display = "none";
+  });
+}
+
+// ── LOAD DATA ───────────────────────────────
+async function loadData() {
+  await Promise.all([loadParticipants(), loadSurveys()]);
+}
+
+async function loadParticipants() {
+  document.getElementById("participants-body").innerHTML = '<div class="loading">載入中…</div>';
+  const snap = await db.collection("participants").get();
+  allParticipants = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const total  = allParticipants.length;
+  const full   = allParticipants.filter(p => (p.stamps||[]).length >= 6).length;
+  const survey = allParticipants.filter(p => p.surveyDone).length;
+  const gift   = allParticipants.filter(p => p.giftCode).length;
+
+  document.getElementById("stat-total").textContent  = total;
+  document.getElementById("stat-full").textContent   = full;
+  document.getElementById("stat-survey").textContent = survey;
+  document.getElementById("stat-gift").textContent   = gift;
+
+  const spotNames = {
+    spot_01: "福仔在哪裡？", spot_02: "閩南式傳統四合院", spot_03: "傳統閩南式紅磚木造商家",
+    spot_04: "80年代火車頭？", spot_05: "找找綠地公園？", spot_06: "綠地公園與四合院"
+  };
+  const allSpots = ["spot_01","spot_02","spot_03","spot_04","spot_05","spot_06"];
+
+  let html = `<table>
+    <thead><tr>
+      <th>姓名</th><th>Email</th><th>集章狀況</th><th>問卷</th><th>抽獎獎項</th><th>序號</th><th>兌換狀態</th><th>登記時間</th>
+    </tr></thead><tbody>`;
+
+  allParticipants.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+
+  allParticipants.forEach(p => {
+    const stamps = p.stamps || [];
+    const count = stamps.length;
+    const dots = allSpots.map(s =>
+      `<div class="dot ${stamps.includes(s) ? 'dot-filled' : 'dot-empty'}" title="${spotNames[s]}"></div>`
+    ).join('');
+    const stampBadge = count >= 6
+      ? `<span class="badge badge-full">${count}/6 完成</span>`
+      : `<span class="badge badge-partial">${count}/6</span>`;
+    const surveyBadge = p.surveyDone
+      ? `<span class="badge badge-done">已完成</span>`
+      : `<span class="badge badge-pending">未完成</span>`;
+    const giftCode = p.giftCode || '—';
+    const date = p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString("zh-TW") : '—';
+
+    const prizeName = p.prizeName || '—';
+    const redeemBadge = p.redeemed
+      ? `<span class="badge badge-done">已兌換</span>`
+      : (p.prizeName ? `<span class="badge badge-pending">待兌換</span>` : '—');
+    html += `<tr>
+      <td style="font-weight:500;">${p.displayName || '—'}</td>
+      <td style="color:#666;">${p.email || '—'}</td>
+      <td>${stampBadge}<div class="stamp-dots" style="margin-top:4px;">${dots}</div></td>
+      <td>${surveyBadge}</td>
+      <td style="color:var(--brick);font-weight:600;">${prizeName}</td>
+      <td style="font-family:monospace; color:var(--brick); font-weight:700;">${giftCode}</td>
+      <td>${redeemBadge}</td>
+      <td style="color:#888;">${date}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById("participants-body").innerHTML = html;
+}
+
+async function loadSurveys() {
+  document.getElementById("survey-body").innerHTML = '<div class="loading">載入中…</div>';
+  const snap = await db.collection("survey_responses").get();
+  allSurveys = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (allSurveys.length === 0) {
+    document.getElementById("survey-body").innerHTML = '<div class="loading">尚無問卷回饋</div>';
+    return;
+  }
+
+  let html = `<table>
+    <thead><tr>
+      <th>姓名</th><th>Email</th><th>滿意度</th><th>最喜歡的據點</th><th>意見回饋</th><th>序號</th><th>填寫時間</th>
+    </tr></thead><tbody>`;
+
+  const satisfactionMap = { "5": "非常滿意", "4": "滿意", "3": "普通", "2": "不滿意" };
+
+  allSurveys.sort((a,b) => (b.submittedAt?.seconds||0) - (a.submittedAt?.seconds||0));
+
+  allSurveys.forEach(s => {
+    const date = s.submittedAt ? new Date(s.submittedAt.seconds * 1000).toLocaleDateString("zh-TW") : '—';
+    html += `<tr>
+      <td style="font-weight:500;">${s.displayName || '—'}</td>
+      <td style="color:#666;">${s.email || '—'}</td>
+      <td>${satisfactionMap[s.q1_satisfaction] || s.q1_satisfaction || '—'}</td>
+      <td>${s.q2_favorite || '—'}</td>
+      <td style="max-width:200px; word-break:break-word; color:#555;">${s.q3_comment || '—'}</td>
+      <td style="font-family:monospace; color:var(--brick); font-weight:700;">${s.giftCode || '—'}</td>
+      <td style="color:#888;">${date}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById("survey-body").innerHTML = html;
+}
+
+// ── EXPORT CSV ──────────────────────────────
+function exportCSV(type) {
+  let rows, filename;
+  if (type === 'participants') {
+    rows = [["姓名","Email","集章數","蓋章據點","問卷完成","抽獎獎項","序號","兌換狀態","登記時間"]];
+    allParticipants.forEach(p => {
+      rows.push([
+        p.displayName || '',
+        p.email || '',
+        (p.stamps||[]).length,
+        (p.stamps||[]).join('|'),
+        p.surveyDone ? '是' : '否',
+        p.prizeName || '',
+        p.giftCode || '',
+        p.redeemed ? '已兌換' : (p.prizeName ? '待兌換' : ''),
+        p.createdAt ? new Date(p.createdAt.seconds*1000).toLocaleDateString("zh-TW") : ''
+      ]);
+    });
+    filename = '集章記錄.csv';
+  } else {
+    rows = [["姓名","Email","滿意度","最喜歡據點","意見回饋","序號","填寫時間"]];
+    allSurveys.forEach(s => {
+      rows.push([
+        s.displayName || '',
+        s.email || '',
+        s.q1_satisfaction || '',
+        s.q2_favorite || '',
+        (s.q3_comment || '').replace(/,/g, '，'),
+        s.giftCode || '',
+        s.submittedAt ? new Date(s.submittedAt.seconds*1000).toLocaleDateString("zh-TW") : ''
+      ]);
+    });
+    filename = '問卷回饋.csv';
+  }
+
+  const bom = '\uFEFF';
+  const csv = bom + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── TABS ────────────────────────────────────
+function switchTab(id, btn) {
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// PRIZES 定義（與 index.html 保持同步）
+// ═══════════════════════════════════════
+const PRIZES_ADMIN = [
+  { 
+    id: "prize_01", 
+    name: "粽子零錢包",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 5, "2026-06-20": 5, "2026-06-21": 5 
+    }
+  },
+  { 
+    id: "prize_02", 
+    name: "福氣香火袋",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 30, "2026-06-20": 30, "2026-06-21": 30 
+    }
+  },
+  { 
+    id: "prize_03", 
+    name: "非遺漂流漆扇免費 DIY",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 0, "2026-06-20": 5, "2026-06-21": 5 
+    }
+  },
+  { 
+    id: "prize_04", 
+    name: "福仔漁夫帽",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 1, "2026-06-20": 1, "2026-06-21": 1 
+    }
+  },
+  { 
+    id: "prize_05", 
+    name: "100元抵用卷數量20張",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 10, "2026-06-20": 5, "2026-06-21": 5 
+    }
+  },
+  { 
+    id: "prize_06", 
+    name: "艾草養生槌 * 6 支",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 2, "2026-06-20": 2, "2026-06-21": 2 
+    }
+  },
+  { 
+    id: "prize_07", 
+    name: "三一瑪德蓮精美禮盒 *3",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 1, "2026-06-20": 1, "2026-06-21": 1 
+    }
+  },
+  { 
+    id: "prize_08", 
+    name: "漢服體驗免費（含髪/妝/衣服）",
+    dailyLimits: { 
+      "2026-06-12": 5, "2026-06-13": 5, "2026-06-14": 5, "2026-06-15": 5, "2026-06-16": 5, "2026-06-17": 5, "2026-06-18": 5,
+      "2026-06-19": 1, "2026-06-20": 1, "2026-06-21": 1 
+    }
+  }
+];
+
+async function loadLotteryStats() {
+  const body = document.getElementById("lottery-stats-body");
+  body.innerHTML = "<div class='loading'>載入中...</div>";
+  
+  // Get last 3 days
+  const days = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+
+  let html = "";
+  for (const day of days) {
+    const snap = await db.collection("lottery_daily").doc(day).get();
+    const data = snap.exists ? snap.data() : {};
+    html += `<div style="margin-bottom:24px;">
+      <div style="font-weight:700;font-size:15px;color:#8B2217;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f0ddd8;">📅 ${day}</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="background:#f9f0ee;font-size:12px;color:#666;">
+          <th style="padding:8px;text-align:left;">獎項</th>
+          <th style="padding:8px;text-align:center;">已發出</th>
+          <th style="padding:8px;text-align:center;">劃額</th>
+          <th style="padding:8px;text-align:center;">剩餘</th>
+          <th style="padding:8px;text-align:center;">狀態</th>
+        </tr>`;
+    for (const p of PRIZES_ADMIN) {
+      const used = data[p.id] || 0;
+      const limit = p.dailyLimits[day] || 0;
+      const remaining = limit - used;
+      const status = remaining === 0 ? "🔴 已售完" : remaining <= 2 ? "🟡 剩餘不多" : "🟢 充足";
+      html += `<tr style="border-bottom:1px solid #f0ddd8;font-size:13px;">
+        <td style="padding:8px;">${p.name}</td>
+        <td style="padding:8px;text-align:center;">${used}</td>
+        <td style="padding:8px;text-align:center;font-weight:700;">${limit}</td>
+        <td style="padding:8px;text-align:center;font-weight:700;">${remaining}</td>
+        <td style="padding:8px;text-align:center;">${status}</td>
+      </tr>`;
+    }
+    html += "</table></div>";
+  }
+  body.innerHTML = html;
+}
+
+</script>
+</body>
+</html>
